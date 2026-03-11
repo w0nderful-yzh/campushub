@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: campushub
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/campushub?useSSL=false&serverTimezone=UTC
+    username: root
+    password: Yangzihao2006.
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+server:
+  port: 8080
