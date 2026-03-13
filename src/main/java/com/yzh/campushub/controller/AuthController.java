@@ -30,5 +30,12 @@ public class AuthController {
         return ResponseEntity.status(result.getCode()).body(result);
     }
 
+    //    获取当前登录用户信息
+    @GetMapping("/me")
+    public ResponseEntity<Result> getMe(){
+        Result result = authService.getMe();
+        return ResponseEntity.status(result.getCode()).body(result);
+    }
+
 }
 

@@ -14,5 +14,8 @@ public interface AuthService{
 
 //    登录
     Result login(LoginDTO loginDTO);
+
+//    获取当前登录用户信息
+    Result getMe();
 }
 

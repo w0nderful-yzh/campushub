@@ -22,6 +22,8 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.concurrent.TimeUnit;
 
+import com.yzh.campushub.utils.UserContext;
+
 @Slf4j
 @Service
 public class AuthServiceImpl implements AuthService {
@@ -108,6 +110,30 @@ public class AuthServiceImpl implements AuthService {
         loginVO.setUserInfo(userInfoVO);
         
         return Result.ok(loginVO);
+    }
+
+    @Override
+    public Result getMe() {
+        // 1. 从ThreadLocal获取当前登录用户ID
+        Long userId = UserContext.getUserId();
+        if (userId == null) {
+            return Result.fail(Constants.CODE_401, Constants.MSG_LOGIN_FAILED);
+        }
+
+        // 2. 查询数据库获取最新用户信息
+        User user = userService.getById(userId);
+        if (user == null) {
+            return Result.fail(Constants.CODE_404, Constants.MSG_USER_NOT_FOUND);
+        }
+
+        // 3. 构建返回VO
+        UserInfoVO userInfoVO = new UserInfoVO();
+        BeanUtils.copyProperties(user, userInfoVO);
+        if (user.getRole() != null) {
+            userInfoVO.setRole(String.valueOf(user.getRole()));
+        }
+
+        return Result.ok(userInfoVO);
     }
 }
 
