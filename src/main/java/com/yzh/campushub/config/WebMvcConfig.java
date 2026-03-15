@@ -20,7 +20,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .excludePathPatterns(
                         "/api/auth/login", // 排除登录
                         "/api/auth/register", // 排除注册
-                        "/error" // 排除错误页面
+                        "/error", // 排除错误页面
+                        "/api/users/**" // 排除用户主页信息
                 );
     }
 }
