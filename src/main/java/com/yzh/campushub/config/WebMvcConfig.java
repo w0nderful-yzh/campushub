@@ -15,14 +15,14 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(authInterceptor())
-                .addPathPatterns("/api/**") // 拦截所有api请求
-                .excludePathPatterns(
-                        "/api/auth/login", // 排除登录
-                        "/api/auth/register", // 排除注册
-                        "/error", // 排除错误页面
-                        "/api/users/**" // 排除用户主页信息
-                );
+//        registry.addInterceptor(authInterceptor())
+//                .addPathPatterns("/api/**") // 拦截所有api请求
+//                .excludePathPatterns(
+//                        "/api/auth/login", // 排除登录
+//                        "/api/auth/register", // 排除注册
+//                        "/error", // 排除错误页面
+//                        "/api/users/**" // 排除用户主页信息
+//                );
     }
 }
 

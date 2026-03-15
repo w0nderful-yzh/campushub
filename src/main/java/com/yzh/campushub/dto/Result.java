@@ -1,5 +1,6 @@
 package com.yzh.campushub.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.yzh.campushub.utils.Constants;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -10,6 +11,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class Result {
     private Integer code; // HTTP状态码
     private String message; // 提示信息
