@@ -21,6 +21,11 @@ public class AuthInterceptor implements HandlerInterceptor {
             return false;
         }
 
+        // 处理 Bearer 前缀
+        if (token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        }
+
         try {
             // 3. 解析token获取userId
             Long userId = JwtUtil.getUserId(token);
