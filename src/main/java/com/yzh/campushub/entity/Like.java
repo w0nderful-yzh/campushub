@@ -20,6 +20,6 @@ public class Like implements Serializable {
     private Long id;
     private Long postId;
     private Long userId;
-    private Long createTime;
+    private java.time.LocalDateTime createTime;
 }
 
