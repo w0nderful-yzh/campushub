@@ -27,6 +27,12 @@ public class UserController {
         return ResponseEntity.ok(Result.ok(userHomeVO));
     }
 
+    /**
+     * 更新用户个人资料
+     * @param userId             用户ID
+     * @param updateProfileDTO   包含更新资料的对象
+     * @return Result
+     */
     @PutMapping("/profile")
     public ResponseEntity<Result> updateProfile(@RequestParam Long userId, @RequestBody UpdateProfileDTO updateProfileDTO) {
         log.info("更新用户个人资料: userId={}", userId);
@@ -34,6 +40,12 @@ public class UserController {
         return ResponseEntity.ok(Result.ok("个人资料更新成功"));
     }
 
+    /**
+     * 更新用户头像
+     * @param userId 用户ID
+     * @param file   头像文件
+     * @return Result 包含新的头像访问路径
+     */
     @PostMapping("/avatar")
     public ResponseEntity<Result> updateAvatar(@RequestParam Long userId, @RequestParam MultipartFile file) {
         log.info("更新用户头像: userId={}", userId);
