@@ -63,8 +63,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
                     .or().like(Post::getContent, queryDTO.getKeyword()));
         }
 
-        // status & is_deleted
-        wrapper.eq(Post::getStatus, 0); 
+    // 仅过滤逻辑删除，保留历史状态帖子（避免首页漏数据）
         wrapper.eq(Post::getIsDeleted, 0);
 
         // sort
@@ -134,7 +133,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
             for (int i = 0; i < images.size(); i++) {
                 String imgUrl = images.get(i);
                 Image image = new Image();
-                image.setPostID(post.getId());
+                image.setPostId(post.getId());
                 image.setImageUrl(imgUrl);
                 image.setSort(i);
                 image.setCreateTime(LocalDateTime.now());
@@ -169,7 +168,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
 
         // Images
         LambdaQueryWrapper<Image> imageWrapper = new LambdaQueryWrapper<>();
-        imageWrapper.eq(Image::getPostID, postId);
+        imageWrapper.eq(Image::getPostId, postId);
         imageWrapper.orderByAsc(Image::getSort);
         List<Image> imageList = imageMapper.selectList(imageWrapper);
         if (imageList != null) {
@@ -241,7 +240,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
         // 5. 更新图片关联信息
         // 先删除旧图片
         LambdaQueryWrapper<Image> deleteWrapper = new LambdaQueryWrapper<>();
-        deleteWrapper.eq(Image::getPostID, postId);
+        deleteWrapper.eq(Image::getPostId, postId);
         imageMapper.delete(deleteWrapper);
 
         // 再插入新图片
@@ -249,7 +248,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
             for (int i = 0; i < images.size(); i++) {
                 String imgUrl = images.get(i);
                 Image image = new Image();
-                image.setPostID(postId);
+                image.setPostId(postId);
                 image.setImageUrl(imgUrl);
                 image.setSort(i);
                 image.setCreateTime(LocalDateTime.now());
