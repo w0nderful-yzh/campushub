@@ -1,15 +1,29 @@
 # Project Instructions
 
 ## Tech Stack
+
+### Backend (`backend/`)
 - Java 17
-- Spring Boot
-- MyBatis-Plus
+- Spring Boot 4.0.3
+- MyBatis-Plus 3.5.15
 - MySQL
 - Redis
 - JWT
 - Maven
 
+### Frontend (`frontend/`)
+- Vue 3 (Composition API + `<script setup>`)
+- TypeScript
+- Vite 5
+- Pinia (state management)
+- Vue Router 4
+- Naive UI (component library)
+- Axios (HTTP client)
+- Sass
+
 ## Architecture
+
+### Backend
 - Use layered architecture: Controller -> Service -> Mapper
 - Controllers handle HTTP request/response only
 - Services contain business logic
@@ -17,6 +31,15 @@
 - Use DTO for request and response
 - Use Entity for database models
 - Use VO for returned view objects when needed
+
+### Frontend
+- `api/` — API service modules (one per domain)
+- `components/` — Reusable UI components
+- `views/` — Page-level view components
+- `stores/` — Pinia state stores
+- `types/` — TypeScript type definitions
+- `utils/` — Utility/helper functions
+- `router/` — Route definitions
 
 ## Coding Style
 - Follow RESTful API design
