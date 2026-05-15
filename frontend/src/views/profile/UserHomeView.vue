@@ -25,11 +25,33 @@
               <div class="muted">
                 用户名：{{ profile.username }} · 注册于 {{ formatDateTime(profile.createTime) }}
               </div>
+              <div class="follow-stats">
+                <span class="stat-item">
+                  <strong>{{ followCount.followingCount }}</strong> 关注
+                </span>
+                <span class="stat-item">
+                  <strong>{{ followCount.followerCount }}</strong> 粉丝
+                </span>
+              </div>
             </div>
 
-            <router-link v-if="isSelf" to="/me">
-              <n-button quaternary>进入我的主页</n-button>
-            </router-link>
+            <n-space v-if="isSelf">
+              <router-link to="/me">
+                <n-button quaternary>进入我的主页</n-button>
+              </router-link>
+            </n-space>
+            <n-space v-else>
+              <n-button
+                :type="isFollowed ? 'default' : 'primary'"
+                :loading="followLoading"
+                @click="handleToggleFollow"
+              >
+                {{ isFollowed ? '已关注' : '关注' }}
+              </n-button>
+              <router-link to="/messages">
+                <n-button quaternary>发私信</n-button>
+              </router-link>
+            </n-space>
           </div>
 
           <div class="profile-grid">
@@ -57,15 +79,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { NAlert, NButton, NSpin } from 'naive-ui'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { NAlert, NButton, NSpace, NSpin } from 'naive-ui'
 import { useRoute } from 'vue-router'
 
+import { getFollowCountApi, toggleFollowApi, getFollowingApi } from '@/api/follow'
 import { getUserHomeApi } from '@/api/user'
 import { useAuthStore } from '@/stores/auth'
 import type { UserHomeVO } from '@/types/user'
 import { formatDateTime } from '@/utils/format'
 import { resolveAvatarUrl } from '@/utils/url'
+import { message } from '@/utils/message'
 
 const route = useRoute()
 const authStore = useAuthStore()
@@ -73,6 +97,9 @@ const authStore = useAuthStore()
 const loading = ref(false)
 const errorText = ref('')
 const profile = ref<UserHomeVO | null>(null)
+const isFollowed = ref(false)
+const followLoading = ref(false)
+const followCount = reactive({ followingCount: 0, followerCount: 0 })
 
 const userId = computed(() => Number(route.params.id))
 const isSelf = computed(() => authStore.user?.id === userId.value)
@@ -97,8 +124,52 @@ async function loadProfile() {
   }
 }
 
+async function loadFollowCount() {
+  try {
+    const res = await getFollowCountApi(userId.value)
+    if (res.data) {
+      followCount.followingCount = res.data.followingCount
+      followCount.followerCount = res.data.followerCount
+    }
+  } catch {
+    // ignore
+  }
+}
+
+async function checkFollowStatus() {
+  if (!authStore.isLoggedIn || isSelf.value) return
+  try {
+    const res = await getFollowingApi({ pageNum: 1, pageSize: 100 })
+    if (res.data) {
+      isFollowed.value = res.data.some(u => u.id === userId.value)
+    }
+  } catch {
+    // ignore
+  }
+}
+
+async function handleToggleFollow() {
+  if (!authStore.isLoggedIn) {
+    message.warning('请先登录')
+    return
+  }
+  followLoading.value = true
+  try {
+    const res = await toggleFollowApi(userId.value)
+    isFollowed.value = res.data === true
+    followCount.followerCount += isFollowed.value ? 1 : -1
+    message.success(isFollowed.value ? '关注成功' : '已取消关注')
+  } catch {
+    message.error('操作失败')
+  } finally {
+    followLoading.value = false
+  }
+}
+
 onMounted(() => {
   loadProfile()
+  loadFollowCount()
+  checkFollowStatus()
 })
 </script>
 
@@ -119,6 +190,20 @@ onMounted(() => {
   height: 120px;
   border-radius: 28px;
   object-fit: cover;
+}
+
+.follow-stats {
+  display: flex;
+  gap: 20px;
+  margin-top: 8px;
+  font-size: 14px;
+  color: #64748b;
+}
+
+.stat-item strong {
+  color: #0f172a;
+  font-size: 16px;
+  margin-right: 4px;
 }
 
 .profile-grid {

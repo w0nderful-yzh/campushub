@@ -9,6 +9,7 @@ import com.yzh.campushub.entity.Post;
 import com.yzh.campushub.mapper.LikeMapper;
 import com.yzh.campushub.mapper.PostMapper;
 import com.yzh.campushub.service.LikeService;
+import com.yzh.campushub.service.NoticeService;
 import com.yzh.campushub.utils.UserContext;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yzh.campushub.dto.PostQueryDTO;
@@ -39,6 +40,9 @@ public class LikeServiceImpl extends ServiceImpl<LikeMapper, Like> implements Li
 
     @Autowired
     private CategoryMapper categoryMapper;
+
+    @Autowired
+    private NoticeService noticeService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -77,6 +81,11 @@ public class LikeServiceImpl extends ServiceImpl<LikeMapper, Like> implements Li
             save(newLike);
             // Increment like count
             updateWrapper.setSql("like_count = like_count + 1");
+
+            User liker = userMapper.selectById(userId);
+            String likerName = liker != null ? liker.getNickname() : "someone";
+            noticeService.createNotice(post.getUserId(), userId, 1, postId, null,
+                    likerName + " 赞了你的帖子");
         }
         
         postMapper.update(null, updateWrapper);

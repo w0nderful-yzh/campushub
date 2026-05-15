@@ -11,6 +11,7 @@
       <nav class="nav">
         <router-link class="nav-link" to="/">首页</router-link>
         <router-link class="nav-link" to="/posts/create">发帖</router-link>
+        <router-link class="nav-link" to="/activities">活动</router-link>
         <router-link v-if="authStore.isLoggedIn" class="nav-link" to="/me">
           我的主页
         </router-link>
@@ -18,6 +19,16 @@
 
       <div class="actions">
         <template v-if="authStore.isLoggedIn && authStore.user">
+          <router-link class="icon-btn" to="/notices" title="通知">
+            <n-badge :value="unreadNoticeCount" :max="99" :show="unreadNoticeCount > 0">
+              <span class="icon-text">🔔</span>
+            </n-badge>
+          </router-link>
+          <router-link class="icon-btn" to="/messages" title="私信">
+            <n-badge :value="unreadMessageCount" :max="99" :show="unreadMessageCount > 0">
+              <span class="icon-text">✉</span>
+            </n-badge>
+          </router-link>
           <router-link class="user-chip" to="/me">
             <img
               class="avatar"
@@ -43,9 +54,12 @@
 </template>
 
 <script setup lang="ts">
-import { NButton } from 'naive-ui'
+import { onMounted, ref } from 'vue'
+import { NBadge, NButton } from 'naive-ui'
 import { useRouter } from 'vue-router'
 
+import { getUnreadNoticeCountApi } from '@/api/notice'
+import { getUnreadMessageCountApi } from '@/api/message'
 import { useAuthStore } from '@/stores/auth'
 import { resolveAvatarUrl } from '@/utils/url'
 import { message } from '@/utils/message'
@@ -53,11 +67,32 @@ import { message } from '@/utils/message'
 const router = useRouter()
 const authStore = useAuthStore()
 
+const unreadNoticeCount = ref(0)
+const unreadMessageCount = ref(0)
+
 function handleLogout() {
   authStore.logout()
   message.success('已退出登录')
   router.push('/login')
 }
+
+async function loadUnreadCounts() {
+  if (!authStore.isLoggedIn) return
+  try {
+    const [noticeRes, msgRes] = await Promise.all([
+      getUnreadNoticeCountApi(),
+      getUnreadMessageCountApi()
+    ])
+    unreadNoticeCount.value = (noticeRes.data as number) || 0
+    unreadMessageCount.value = (msgRes.data as number) || 0
+  } catch {
+    // ignore
+  }
+}
+
+onMounted(() => {
+  loadUnreadCounts()
+})
 </script>
 
 <style scoped lang="scss">
@@ -144,6 +179,25 @@ function handleLogout() {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  transition: background 0.2s;
+  text-decoration: none;
+}
+
+.icon-btn:hover {
+  background: rgba(148, 163, 184, 0.12);
+}
+
+.icon-text {
+  font-size: 18px;
 }
 
 .user-chip {

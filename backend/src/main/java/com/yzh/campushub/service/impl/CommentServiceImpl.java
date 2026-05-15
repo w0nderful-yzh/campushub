@@ -12,6 +12,7 @@ import com.yzh.campushub.mapper.CommentMapper;
 import com.yzh.campushub.mapper.PostMapper;
 import com.yzh.campushub.mapper.UserMapper;
 import com.yzh.campushub.service.CommentService;
+import com.yzh.campushub.service.NoticeService;
 import com.yzh.campushub.utils.UserContext;
 import com.yzh.campushub.vo.CommentVO;
 import org.springframework.beans.BeanUtils;
@@ -33,6 +34,9 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
 
     @Autowired
     private UserMapper userMapper;
+
+    @Autowired
+    private NoticeService noticeService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -75,6 +79,12 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
         updateWrapper.eq("id", post.getId());
         updateWrapper.setSql("comment_count = comment_count + 1");
         postMapper.update(null, updateWrapper);
+
+        // Create notification for post author
+        User commenter = userMapper.selectById(userId);
+        String commenterName = commenter != null ? commenter.getNickname() : "someone";
+        noticeService.createNotice(post.getUserId(), userId, 2, post.getId(), comment.getId(),
+                commenterName + " 评论了你的帖子");
 
         return Result.ok();
     }

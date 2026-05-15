@@ -11,7 +11,6 @@ import org.springframework.web.servlet.resource.ResourceResolver;
 import org.springframework.web.servlet.resource.ResourceResolverChain;
 
 import jakarta.servlet.http.HttpServletRequest;
-import java.io.IOException;
 import java.util.List;
 
 @Configuration
@@ -70,11 +69,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 return resource;
             }
             // 匹配不到 → 返回 index.html，由 Vue Router 接管
-            try {
-                if (INDEX.exists()) {
-                    return INDEX;
-                }
-            } catch (IOException ignored) {
+            if (INDEX.exists()) {
+                return INDEX;
             }
             return null;
         }

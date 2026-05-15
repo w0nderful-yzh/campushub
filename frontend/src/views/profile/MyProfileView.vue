@@ -22,6 +22,14 @@
                 <div class="muted">
                   用户名：{{ profile.username }} · 注册于 {{ formatDateTime(profile.createTime) }}
                 </div>
+                <div class="follow-stats">
+                  <span class="stat-item">
+                    <strong>{{ followCount.followingCount }}</strong> 关注
+                  </span>
+                  <span class="stat-item">
+                    <strong>{{ followCount.followerCount }}</strong> 粉丝
+                  </span>
+                </div>
               </div>
 
               <n-space>
@@ -66,11 +74,46 @@
           <n-tab-pane name="posts" tab="我的帖子" />
           <n-tab-pane name="likes" tab="我的点赞" />
           <n-tab-pane name="favorites" tab="我的收藏" />
+          <n-tab-pane name="following" tab="我的关注" />
+          <n-tab-pane name="followers" tab="我的粉丝" />
         </n-tabs>
 
         <div v-if="listLoading" class="loading-card">
           <n-spin />
         </div>
+
+        <template v-else-if="isFollowTab">
+          <div v-if="followList.length" class="follow-list">
+            <div v-for="user in followList" :key="user.id" class="follow-item">
+              <router-link :to="`/users/${user.id}`" class="follow-user">
+                <img
+                  class="follow-avatar"
+                  :src="resolveAvatarUrl(user.avatar, user.nickname || 'U')"
+                  alt="avatar"
+                />
+                <div class="follow-info">
+                  <span class="follow-name">{{ user.nickname }}</span>
+                  <span class="follow-college">{{ user.college || '' }}</span>
+                </div>
+              </router-link>
+            </div>
+
+            <PaginationBar
+              :page="query.pageNum"
+              :page-size="query.pageSize"
+              :total="total"
+              @update:page="handlePageChange"
+              @update:page-size="handlePageSizeChange"
+            />
+          </div>
+
+          <EmptyState
+            v-else
+            icon="◍"
+            :title="activeTab === 'following' ? '你还没有关注任何人' : '暂时没有粉丝'"
+            description="去发现更多有趣的人吧。"
+          />
+        </template>
 
         <template v-else-if="listData.length">
           <div class="stack">
@@ -107,6 +150,7 @@ import { NButton, NSpace, NSpin, NTabs, NTabPane } from 'naive-ui'
 import { useRouter } from 'vue-router'
 
 import { getMyFavoritesApi } from '@/api/favorite'
+import { getFollowCountApi, getFollowingApi, getFollowersApi, type FollowUserVO } from '@/api/follow'
 import { getMyLikesApi } from '@/api/like'
 import { getMyPostsApi } from '@/api/post'
 import { getUserHomeApi } from '@/api/user'
@@ -126,13 +170,17 @@ const loadingProfile = ref(false)
 const listLoading = ref(false)
 const profile = ref<UserHomeVO | null>(null)
 const listData = ref<PostVO[]>([])
+const followList = ref<FollowUserVO[]>([])
 const total = ref(0)
-const activeTab = ref<'posts' | 'likes' | 'favorites'>('posts')
+const activeTab = ref<'posts' | 'likes' | 'favorites' | 'following' | 'followers'>('posts')
+const followCount = reactive({ followingCount: 0, followerCount: 0 })
 
 const query = reactive({
   pageNum: 1,
   pageSize: 10
 })
+
+const isFollowTab = computed(() => activeTab.value === 'following' || activeTab.value === 'followers')
 
 const emptyTitle = computed(() => {
   if (activeTab.value === 'posts') return '你还没有发布帖子'
@@ -161,6 +209,19 @@ async function loadProfile() {
   }
 }
 
+async function loadFollowCount() {
+  if (!authStore.user?.id) return
+  try {
+    const res = await getFollowCountApi(authStore.user.id)
+    if (res.data) {
+      followCount.followingCount = res.data.followingCount
+      followCount.followerCount = res.data.followerCount
+    }
+  } catch {
+    // ignore
+  }
+}
+
 async function loadList() {
   listLoading.value = true
   try {
@@ -170,17 +231,26 @@ async function loadList() {
       sortType: 'latest' as const
     }
 
-    let res
-    if (activeTab.value === 'posts') {
-      res = await getMyPostsApi(params)
-    } else if (activeTab.value === 'likes') {
-      res = await getMyLikesApi(params)
+    if (isFollowTab.value) {
+      const res = activeTab.value === 'following'
+        ? await getFollowingApi(params)
+        : await getFollowersApi(params)
+      followList.value = res.data || []
+      total.value = res.total || 0
+      listData.value = []
     } else {
-      res = await getMyFavoritesApi(params)
+      let res
+      if (activeTab.value === 'posts') {
+        res = await getMyPostsApi(params)
+      } else if (activeTab.value === 'likes') {
+        res = await getMyLikesApi(params)
+      } else {
+        res = await getMyFavoritesApi(params)
+      }
+      listData.value = res.data || []
+      total.value = res.total || 0
+      followList.value = []
     }
-
-    listData.value = res.data || []
-    total.value = res.total || 0
   } finally {
     listLoading.value = false
   }
@@ -209,6 +279,7 @@ watch(
 
 onMounted(async () => {
   await loadProfile()
+  await loadFollowCount()
   await loadList()
 })
 </script>
@@ -242,6 +313,20 @@ onMounted(async () => {
   flex-wrap: wrap;
 }
 
+.follow-stats {
+  display: flex;
+  gap: 20px;
+  margin-top: 8px;
+  font-size: 14px;
+  color: #64748b;
+}
+
+.stat-item strong {
+  color: #0f172a;
+  font-size: 16px;
+  margin-right: 4px;
+}
+
 .profile-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -267,6 +352,56 @@ onMounted(async () => {
   min-height: 200px;
   display: grid;
   place-items: center;
+}
+
+.follow-list {
+  margin-top: 12px;
+}
+
+.follow-item {
+  padding: 12px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.follow-item:last-of-type {
+  border-bottom: none;
+}
+
+.follow-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.follow-user:hover .follow-name {
+  color: #2563eb;
+}
+
+.follow-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #eff6ff;
+}
+
+.follow-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.follow-name {
+  font-weight: 600;
+  color: #0f172a;
+  transition: color 0.2s;
+}
+
+.follow-college {
+  font-size: 13px;
+  color: #94a3b8;
 }
 
 @media (max-width: 768px) {
