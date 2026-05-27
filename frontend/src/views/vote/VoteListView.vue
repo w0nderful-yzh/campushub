@@ -72,13 +72,13 @@ onMounted(() => loadVotes())
 .loading-card { min-height: 200px; display: grid; place-items: center; }
 .vote-list { display: flex; flex-direction: column; gap: 14px; }
 .vote-card {
-  padding: 18px; border: 1px solid #f1f5f9; border-radius: 16px;
-  cursor: pointer; transition: all 0.2s;
+  padding: 18px; border: 1px solid #f1f5f9; border-radius: 8px;
+  cursor: pointer; transition: all 0.2s; background: #fff;
 }
-.vote-card:hover { border-color: #bfdbfe; box-shadow: 0 4px 16px rgba(59, 130, 246, 0.1); }
+.vote-card:hover { border-color: #99f6e4; box-shadow: 0 10px 24px rgba(15, 118, 110, 0.09); transform: translateY(-2px); }
 .vote-title { font-size: 16px; font-weight: 700; color: #0f172a; margin-bottom: 6px; }
 .vote-desc { font-size: 13px; color: #64748b; margin-bottom: 10px; }
-.vote-meta { font-size: 12px; color: #94a3b8; display: flex; gap: 16px; margin-bottom: 10px; }
+.vote-meta { font-size: 12px; color: #64748b; display: flex; gap: 16px; margin-bottom: 10px; flex-wrap: wrap; }
 .vote-author { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #334155; }
 .vote-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
 </style>

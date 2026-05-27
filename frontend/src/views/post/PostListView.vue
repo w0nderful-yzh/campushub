@@ -4,7 +4,7 @@
       <div>
         <h1 class="page-title">校园帖子广场</h1>
         <p class="page-subtitle">
-          支持分类筛选、关键词搜索、最新 / 最热排序、分页浏览。
+          看见校园里的新鲜事，也把你的想法留在这里。
         </p>
       </div>
 

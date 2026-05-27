@@ -3,7 +3,7 @@
     <div class="auth-card">
       <h1 class="auth-title">登录 CampusHub</h1>
       <p class="auth-desc">
-        用最少的页面把校园社区主流程跑通。
+        回到你的校园社区，继续参与讨论、活动和投票。
       </p>
 
       <n-form

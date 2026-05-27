@@ -9,7 +9,7 @@
       </div>
 
       <div class="filter-bar">
-        <n-tabs v-model:value="filterType" type="segment" animated @update:value="handleFilterChange">
+        <n-tabs v-model:value="filterType" type="segment" animated>
           <n-tab-pane name="all" tab="全部" />
           <n-tab-pane name="1" tab="讲座" />
           <n-tab-pane name="2" tab="聚会" />
@@ -89,9 +89,12 @@ async function loadActivities() {
   }
 }
 
-function handleFilterChange() { query.pageNum = 1; loadActivities() }
 function handlePageChange(v: number) { query.pageNum = v }
 function handlePageSizeChange(v: number) { query.pageSize = v; query.pageNum = 1 }
+watch(filterType, () => {
+  query.pageNum = 1
+  loadActivities()
+})
 watch(() => [query.pageNum, query.pageSize], () => loadActivities())
 onMounted(() => loadActivities())
 </script>
@@ -107,7 +110,7 @@ onMounted(() => loadActivities())
 .activity-card {
   padding: 18px;
   border: 1px solid #f1f5f9;
-  border-radius: 16px;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
   background: #fff;
@@ -123,4 +126,10 @@ onMounted(() => loadActivities())
 .act-meta { font-size: 13px; color: #64748b; display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
 .act-author { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #334155; }
 .act-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
+
+@media (max-width: 768px) {
+  .activity-grid {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

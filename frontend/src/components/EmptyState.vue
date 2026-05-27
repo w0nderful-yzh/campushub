@@ -24,7 +24,7 @@ withDefaults(
 
 <style scoped lang="scss">
 .empty {
-  padding: 32px 20px;
+  padding: 34px 20px;
   text-align: center;
 }
 
@@ -32,11 +32,11 @@ withDefaults(
   width: 56px;
   height: 56px;
   margin: 0 auto 12px;
-  border-radius: 18px;
+  border-radius: 8px;
   display: grid;
   place-items: center;
-  background: #eff6ff;
-  color: #2563eb;
+  background: #ecfdf5;
+  color: #0f766e;
   font-size: 24px;
   font-weight: 800;
 }

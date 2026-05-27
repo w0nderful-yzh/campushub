@@ -298,6 +298,19 @@ function canDeleteComment(userId: number) {
   return Boolean(currentUserId.value && userId === currentUserId.value)
 }
 
+function ensureLoggedIn() {
+  if (authStore.isLoggedIn) return true
+
+  message.warning('请先登录')
+  router.push({
+    path: '/login',
+    query: {
+      redirect: route.fullPath
+    }
+  })
+  return false
+}
+
 async function loadPostDetail() {
   const res = await getPostDetailApi(postId.value)
   post.value = res.data
@@ -322,6 +335,8 @@ async function loadAll() {
 }
 
 function prepareReply(parentId: number, userId: number, nickname: string) {
+  if (!ensureLoggedIn()) return
+
   replyParentId.value = parentId
   replyUserId.value = userId
   replyNickname.value = nickname
@@ -335,6 +350,7 @@ function clearReply() {
 
 async function handleLike() {
   if (!post.value) return
+  if (!ensureLoggedIn()) return
 
   likeLoading.value = true
   try {
@@ -356,6 +372,7 @@ async function handleLike() {
 
 async function handleFavorite() {
   if (!post.value) return
+  if (!ensureLoggedIn()) return
 
   favoriteLoading.value = true
   try {
@@ -376,6 +393,8 @@ async function handleFavorite() {
 }
 
 async function handleSubmitComment() {
+  if (!ensureLoggedIn()) return
+
   if (!commentContent.value.trim()) {
     message.warning('请输入评论内容')
     return
@@ -399,12 +418,10 @@ async function handleSubmitComment() {
   }
 }
 
-function handleDeleteComment(commentId: number) {
-  return async () => {
-    await deleteCommentApi(commentId)
-    message.success('评论已删除')
-    await Promise.all([loadComments(), loadPostDetail()])
-  }
+async function handleDeleteComment(commentId: number) {
+  await deleteCommentApi(commentId)
+  message.success('评论已删除')
+  await Promise.all([loadComments(), loadPostDetail()])
 }
 
 async function handleDeletePost() {

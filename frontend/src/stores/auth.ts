@@ -44,16 +44,13 @@ export const useAuthStore = defineStore('auth', {
         return
       }
 
-      if (this.user) {
-        this.bootstrapped = true
-        return
-      }
-
       try {
         const res = await getMeApi()
         this.updateUser(res.data || null)
       } catch {
-        // 保持静默，避免启动时弹错
+        this.token = ''
+        this.user = null
+        clearAuthCache()
       } finally {
         this.bootstrapped = true
       }

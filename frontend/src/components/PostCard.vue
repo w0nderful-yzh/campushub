@@ -145,7 +145,7 @@ function goDetail() {
   width: 180px;
   height: 132px;
   object-fit: cover;
-  border-radius: 18px;
+  border-radius: 8px;
   background: #eef2ff;
 }
 

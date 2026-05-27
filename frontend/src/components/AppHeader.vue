@@ -12,6 +12,7 @@
         <router-link class="nav-link" to="/">首页</router-link>
         <router-link class="nav-link" to="/posts/create">发帖</router-link>
         <router-link class="nav-link" to="/activities">活动</router-link>
+        <router-link class="nav-link" to="/votes">投票</router-link>
         <router-link v-if="authStore.isLoggedIn" class="nav-link" to="/me">
           我的主页
         </router-link>
@@ -108,7 +109,7 @@ onMounted(() => {
 
 .header-inner {
   width: min(1120px, calc(100vw - 32px));
-  height: 74px;
+  min-height: 72px;
   margin: 0 auto;
   display: grid;
   grid-template-columns: auto 1fr auto;
@@ -128,24 +129,24 @@ onMounted(() => {
 }
 
 .brand-mark {
-  width: 44px;
-  height: 44px;
-  border-radius: 15px;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, #3b82f6, #2563eb 55%, #1d4ed8);
+  background: linear-gradient(135deg, #2563eb, #0f766e);
   color: #ffffff;
-  font-size: 22px;
+  font-size: 21px;
   font-weight: 800;
-  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.28);
+  box-shadow: 0 10px 22px rgba(15, 118, 110, 0.22);
 }
 
 .brand-title {
-  font-size: 30px;
+  font-size: 25px;
   font-weight: 800;
   line-height: 1;
-  letter-spacing: 0.2px;
-  background: linear-gradient(135deg, #0f172a 10%, #1e3a8a 90%);
+  letter-spacing: 0;
+  background: linear-gradient(135deg, #0f172a 10%, #0f766e 90%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -154,14 +155,16 @@ onMounted(() => {
 .nav {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 8px;
+  min-width: 0;
 }
 
 .nav-link {
   color: #334155;
   font-weight: 600;
-  padding: 8px 14px;
-  border-radius: 999px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  white-space: nowrap;
   transition: all 0.2s ease;
 }
 
@@ -170,9 +173,9 @@ onMounted(() => {
   background: rgba(148, 163, 184, 0.12);
 }
 
-.nav-link.router-link-active {
-  color: #1d4ed8;
-  background: rgba(59, 130, 246, 0.12);
+.nav-link.router-link-exact-active {
+  color: #0f766e;
+  background: rgba(15, 118, 110, 0.1);
 }
 
 .actions {
@@ -208,7 +211,7 @@ onMounted(() => {
   padding: 6px 12px 6px 6px;
   background: #ffffff;
   border: 1px solid #e5edf6;
-  border-radius: 999px;
+  border-radius: 8px;
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
   transition: all 0.2s ease;
 }
@@ -231,15 +234,36 @@ onMounted(() => {
     width: calc(100vw - 20px);
     grid-template-columns: 1fr auto;
     height: auto;
-    padding: 14px 0;
+    padding: 12px 0 10px;
+    gap: 10px;
   }
 
   .nav {
+    order: 3;
+    grid-column: 1 / -1;
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+
+  .nav::-webkit-scrollbar {
     display: none;
   }
 
   .brand-title {
-    font-size: 26px;
+    font-size: 22px;
+  }
+
+  .actions {
+    gap: 6px;
+  }
+
+  .user-chip span {
+    max-width: 82px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 </style>

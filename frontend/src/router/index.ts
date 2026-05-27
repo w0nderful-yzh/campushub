@@ -25,7 +25,8 @@ const router = createRouter({
         {
           path: '',
           name: 'post-list',
-          component: () => import('@/views/post/PostListView.vue')
+          component: () => import('@/views/post/PostListView.vue'),
+          meta: { requiresAuth: true }
         },
         {
           path: 'posts/create',
@@ -36,7 +37,8 @@ const router = createRouter({
         {
           path: 'posts/:id',
           name: 'post-detail',
-          component: () => import('@/views/post/PostDetailView.vue')
+          component: () => import('@/views/post/PostDetailView.vue'),
+          meta: { requiresAuth: true }
         },
         {
           path: 'posts/:id/edit',
@@ -59,7 +61,8 @@ const router = createRouter({
         {
           path: 'users/:id',
           name: 'user-home',
-          component: () => import('@/views/profile/UserHomeView.vue')
+          component: () => import('@/views/profile/UserHomeView.vue'),
+          meta: { requiresAuth: true }
         },
         {
           path: 'notices',
@@ -82,7 +85,8 @@ const router = createRouter({
         {
           path: 'activities',
           name: 'activities',
-          component: () => import('@/views/activity/ActivityListView.vue')
+          component: () => import('@/views/activity/ActivityListView.vue'),
+          meta: { requiresAuth: true }
         },
         {
           path: 'activities/create',
@@ -93,12 +97,14 @@ const router = createRouter({
         {
           path: 'activities/:id',
           name: 'activity-detail',
-          component: () => import('@/views/activity/ActivityDetailView.vue')
+          component: () => import('@/views/activity/ActivityDetailView.vue'),
+          meta: { requiresAuth: true }
         },
         {
           path: 'votes',
           name: 'votes',
-          component: () => import('@/views/vote/VoteListView.vue')
+          component: () => import('@/views/vote/VoteListView.vue'),
+          meta: { requiresAuth: true }
         },
         {
           path: 'votes/create',
@@ -109,7 +115,8 @@ const router = createRouter({
         {
           path: 'votes/:id',
           name: 'vote-detail',
-          component: () => import('@/views/vote/VoteDetailView.vue')
+          component: () => import('@/views/vote/VoteDetailView.vue'),
+          meta: { requiresAuth: true }
         },
         {
           path: 'admin/reports',

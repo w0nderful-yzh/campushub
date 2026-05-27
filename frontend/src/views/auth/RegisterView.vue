@@ -3,7 +3,7 @@
     <div class="auth-card">
       <h1 class="auth-title">注册 CampusHub</h1>
       <p class="auth-desc">
-        注册成功后即可登录并体验完整社区流程。
+        创建账号后，就可以发布内容并和同学互动。
       </p>
 
       <n-form

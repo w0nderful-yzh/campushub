@@ -27,7 +27,10 @@ request.interceptors.response.use(
       }
 
       if (result.code === 401) {
+        const authMessage = getToken() ? '登录已失效，请重新登录' : '请先登录后继续'
         clearAuthCache()
+        message.error(authMessage)
+        return Promise.reject(new Error(authMessage))
       }
 
       message.error(result.message || '请求失败')
@@ -41,8 +44,10 @@ request.interceptors.response.use(
     const serverMessage = error.response?.data?.message
 
     if (status === 401) {
+      const authMessage = getToken() ? '登录已失效，请重新登录' : '请先登录后继续'
       clearAuthCache()
-      message.error(serverMessage || '登录已失效，请重新登录')
+      message.error(serverMessage || authMessage)
+      return Promise.reject(new Error(serverMessage || authMessage))
     } else if (status === 403) {
       message.error(serverMessage || '无权限执行该操作')
     } else if (status === 404) {
@@ -53,7 +58,7 @@ request.interceptors.response.use(
       message.error(serverMessage || error.message || '网络请求失败')
     }
 
-    return Promise.reject(error)
+    return Promise.reject(new Error(serverMessage || error.message || '网络请求失败'))
   }
 )
 
