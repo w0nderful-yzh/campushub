@@ -6,8 +6,18 @@
         <span class="muted">{{ formatDateTime(post.createTime) }}</span>
       </div>
 
-      <h3 class="post-title">{{ post.title }}</h3>
-      <p class="post-content text-truncate-3">{{ post.content }}</p>
+      <h3
+        v-if="post.highlightedTitle"
+        class="post-title"
+        v-html="post.highlightedTitle"
+      />
+      <h3 v-else class="post-title">{{ post.title }}</h3>
+      <p
+        v-if="post.highlightedContent"
+        class="post-content text-truncate-3"
+        v-html="post.highlightedContent"
+      />
+      <p v-else class="post-content text-truncate-3">{{ post.content }}</p>
 
       <div class="post-footer">
         <router-link
@@ -44,12 +54,12 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 
-import type { PostVO } from '@/types/post'
+import type { PostSearchVO, PostVO } from '@/types/post'
 import { formatCount, formatDateTime } from '@/utils/format'
 import { resolveAvatarUrl, resolveCoverUrl } from '@/utils/url'
 
 const props = defineProps<{
-  post: PostVO
+  post: PostVO | PostSearchVO
 }>()
 
 const router = useRouter()

@@ -124,6 +124,14 @@ img {
   -webkit-box-orient: vertical;
 }
 
+.search-hit {
+  padding: 0 2px;
+  border-radius: 4px;
+  background: #fef3c7;
+  color: #92400e;
+  font-weight: 700;
+}
+
 .auth-shell {
   min-height: 100vh;
   display: grid;
@@ -164,6 +172,7 @@ img {
 }
 
 .toolbar-wrap > .n-input,
+.toolbar-wrap > .n-auto-complete,
 .toolbar-wrap > .n-select {
   flex: 1 1 190px;
   min-width: 0;

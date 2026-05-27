@@ -25,3 +25,12 @@ server:
 file:
   upload:
     path: uploads
+
+campushub:
+  search:
+    elasticsearch:
+      enabled: true
+      url: http://localhost:9200
+      index: campushub_posts
+      username: ""
+      password: ""

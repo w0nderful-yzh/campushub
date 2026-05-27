@@ -2,8 +2,12 @@ export interface PostQueryDTO {
   pageNum: number
   pageSize: number
   categoryId?: number
-  sortType?: 'latest' | 'hottest'
+  sortType?: 'latest' | 'hottest' | 'relevance'
   keyword?: string
+}
+
+export interface PostSearchQueryDTO extends PostQueryDTO {
+  sortType?: 'relevance' | 'latest'
 }
 
 export interface PostVO {
@@ -24,6 +28,12 @@ export interface PostVO {
   isTop?: number
   createTime?: string
   updateTime?: string
+  highlightedTitle?: string
+  highlightedContent?: string
+}
+
+export interface PostSearchVO extends PostVO {
+  score?: number
 }
 
 export interface PostAuthorVO {

@@ -10,6 +10,7 @@ import com.yzh.campushub.entity.Category;
 import com.yzh.campushub.entity.Image;
 import com.yzh.campushub.entity.Post;
 import com.yzh.campushub.entity.User;
+import com.yzh.campushub.event.PostSearchSyncEvent;
 import com.yzh.campushub.mapper.CategoryMapper;
 import com.yzh.campushub.mapper.ImageMapper;
 import com.yzh.campushub.mapper.PostMapper;
@@ -20,6 +21,7 @@ import com.yzh.campushub.vo.PostVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -46,6 +48,9 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
 
     @Autowired
     private com.yzh.campushub.mapper.FavoriteMapper favoriteMapper;
+
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
 
     @Override
     public Result listPosts(PostQueryDTO queryDTO) {
@@ -140,6 +145,8 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
                 imageMapper.insert(image);
             }
         }
+
+        eventPublisher.publishEvent(new PostSearchSyncEvent(post.getId(), PostSearchSyncEvent.Action.UPSERT));
     }
 
     @Override
@@ -255,6 +262,8 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
                 imageMapper.insert(image);
             }
         }
+
+        eventPublisher.publishEvent(new PostSearchSyncEvent(postId, PostSearchSyncEvent.Action.UPSERT));
         
         log.info("帖子更新成功，ID: {}", postId);
         return Result.ok();
@@ -289,6 +298,8 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
         post.setIsDeleted(1);
         post.setUpdateTime(LocalDateTime.now());
         updateById(post);
+
+        eventPublisher.publishEvent(new PostSearchSyncEvent(postId, PostSearchSyncEvent.Action.DELETE));
 
         log.info("帖子删除成功，ID: {}", postId);
         return Result.ok();

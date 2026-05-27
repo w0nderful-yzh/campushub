@@ -1,9 +1,27 @@
-import type { PostDetailVO, PostQueryDTO, PostVO, SavePostDTO } from '@/types/post'
+import type {
+  PostDetailVO,
+  PostQueryDTO,
+  PostSearchQueryDTO,
+  PostSearchVO,
+  PostVO,
+  SavePostDTO
+} from '@/types/post'
 import type { Result } from '@/types/result'
 import request from '@/utils/request'
 
 export function getPostsApi(params: PostQueryDTO): Promise<Result<PostVO[]>> {
   return request.get('/posts', { params })
+}
+
+export function searchPostsApi(params: PostSearchQueryDTO): Promise<Result<PostSearchVO[]>> {
+  return request.get('/posts/search', { params })
+}
+
+export function getPostSearchSuggestionsApi(params: {
+  keyword: string
+  size?: number
+}): Promise<Result<string[]>> {
+  return request.get('/posts/search/suggestions', { params })
 }
 
 export function getMyPostsApi(params: PostQueryDTO): Promise<Result<PostVO[]>> {
