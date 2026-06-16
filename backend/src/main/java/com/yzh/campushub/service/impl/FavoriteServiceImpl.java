@@ -1,7 +1,6 @@
 package com.yzh.campushub.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yzh.campushub.dto.PostQueryDTO;
@@ -19,6 +18,7 @@ import com.yzh.campushub.utils.UserContext;
 import com.yzh.campushub.vo.PostVO;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,7 +49,7 @@ public class FavoriteServiceImpl extends ServiceImpl<FavoriteMapper, Favorite> i
 
         // Check if post exists
         Post post = postMapper.selectById(postId);
-        if (post == null || post.getIsDeleted() == 1) {
+        if (post == null || post.getIsDeleted() == 1 || !Integer.valueOf(1).equals(post.getStatus())) {
             return Result.fail("Post not found");
         }
 
@@ -59,26 +59,23 @@ public class FavoriteServiceImpl extends ServiceImpl<FavoriteMapper, Favorite> i
         queryWrapper.eq(Favorite::getUserId, userId);
         Favorite existingFav = getOne(queryWrapper);
 
-        UpdateWrapper<Post> updateWrapper = new UpdateWrapper<>();
-        updateWrapper.eq("id", postId);
-
         if (existingFav != null) {
             // Already favorited, so unfavorite
             removeById(existingFav.getId());
-            // Decrement favorite count
-            updateWrapper.setSql("favorite_count = favorite_count - 1");
         } else {
             // Not favorited, so favorite
             Favorite newFav = new Favorite();
             newFav.setPostId(postId);
             newFav.setUserId(userId);
             newFav.setCreateTime(LocalDateTime.now());
-            save(newFav);
-            // Increment favorite count
-            updateWrapper.setSql("favorite_count = favorite_count + 1");
+            try {
+                save(newFav);
+            } catch (DuplicateKeyException ignored) {
+                // Concurrent duplicate favorite is already the desired final state.
+            }
         }
 
-        postMapper.update(null, updateWrapper);
+        postMapper.refreshInteractionCounts(postId);
 
         return Result.ok();
     }
@@ -93,7 +90,7 @@ public class FavoriteServiceImpl extends ServiceImpl<FavoriteMapper, Favorite> i
 
         // Check if post exists
         Post post = postMapper.selectById(postId);
-        if (post == null || post.getIsDeleted() == 1) {
+        if (post == null || post.getIsDeleted() == 1 || !Integer.valueOf(1).equals(post.getStatus())) {
             return Result.fail("Post not found");
         }
 
@@ -106,11 +103,7 @@ public class FavoriteServiceImpl extends ServiceImpl<FavoriteMapper, Favorite> i
         if (existingFav != null) {
             // Already favorited, so unfavorite
             removeById(existingFav.getId());
-            // Decrement favorite count
-            UpdateWrapper<Post> updateWrapper = new UpdateWrapper<>();
-            updateWrapper.eq("id", postId);
-            updateWrapper.setSql("favorite_count = favorite_count - 1");
-            postMapper.update(null, updateWrapper);
+            postMapper.refreshInteractionCounts(postId);
         }
 
         return Result.ok();
@@ -144,7 +137,7 @@ public class FavoriteServiceImpl extends ServiceImpl<FavoriteMapper, Favorite> i
 
         List<PostVO> postVOList = favorites.stream().map(fav -> {
             Post post = postMap.get(fav.getPostId());
-            if (post == null || post.getIsDeleted() == 1) {
+            if (post == null || post.getIsDeleted() == 1 || !Integer.valueOf(1).equals(post.getStatus())) {
                 return null; // Skip deleted posts
             }
 

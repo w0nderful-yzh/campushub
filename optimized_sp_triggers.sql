@@ -331,15 +331,19 @@ BEGIN
             SET MESSAGE_TEXT = '活动未开放报名';
     END IF;
 
+    SELECT COUNT(*) INTO v_current
+    FROM activity_signup
+    WHERE activity_id = p_activity_id AND status = 1;
+
     IF v_max > 0 AND v_current >= v_max THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = '活动名额已满';
     END IF;
 
-    -- 检查是否已报名
+    -- 检查是否已有效报名
     SELECT COUNT(*) INTO v_existing
     FROM activity_signup
-    WHERE activity_id = p_activity_id AND user_id = p_user_id;
+    WHERE activity_id = p_activity_id AND user_id = p_user_id AND status = 1;
 
     IF v_existing > 0 THEN
         COMMIT;
@@ -347,6 +351,9 @@ BEGIN
                p_activity_id AS activity_id,
                v_current AS current_count;
     ELSE
+        DELETE FROM activity_signup
+        WHERE activity_id = p_activity_id AND user_id = p_user_id AND status <> 1;
+
         INSERT INTO activity_signup(activity_id, user_id, status)
         VALUES(p_activity_id, p_user_id, 1);
 
@@ -398,12 +405,28 @@ BEGIN
     IF v_like_id IS NULL THEN
         INSERT INTO `like`(post_id, user_id)
         VALUES(p_post_id, p_user_id);
+        UPDATE post
+        SET like_count = (
+                SELECT COUNT(*)
+                FROM `like`
+                WHERE post_id = p_post_id
+            ),
+            update_time = CURRENT_TIMESTAMP
+        WHERE id = p_post_id;
         COMMIT;
         SELECT 'liked' AS action_result,
                p_post_id AS post_id,
                (SELECT like_count FROM post WHERE id = p_post_id) AS current_like_count;
     ELSE
         DELETE FROM `like` WHERE id = v_like_id;
+        UPDATE post
+        SET like_count = (
+                SELECT COUNT(*)
+                FROM `like`
+                WHERE post_id = p_post_id
+            ),
+            update_time = CURRENT_TIMESTAMP
+        WHERE id = p_post_id;
         COMMIT;
         SELECT 'unliked' AS action_result,
                p_post_id AS post_id,
@@ -431,7 +454,11 @@ FOR EACH ROW
 BEGIN
     IF NEW.status = 1 THEN
         UPDATE activity
-        SET current_count = current_count + 1,
+        SET current_count = (
+                SELECT COUNT(*)
+                FROM activity_signup
+                WHERE activity_id = NEW.activity_id AND status = 1
+            ),
             update_time = CURRENT_TIMESTAMP
         WHERE id = NEW.activity_id;
     END IF;
@@ -446,7 +473,11 @@ FOR EACH ROW
 BEGIN
     IF OLD.status = 1 THEN
         UPDATE activity
-        SET current_count = GREATEST(current_count - 1, 0),
+        SET current_count = (
+                SELECT COUNT(*)
+                FROM activity_signup
+                WHERE activity_id = OLD.activity_id AND status = 1
+            ),
             update_time = CURRENT_TIMESTAMP
         WHERE id = OLD.activity_id;
     END IF;
@@ -470,7 +501,11 @@ BEGIN
     IF NEW.is_deleted = 0 AND NEW.status = 1 THEN
         -- 更新评论计数
         UPDATE post
-        SET comment_count = comment_count + 1,
+        SET comment_count = (
+                SELECT COUNT(*)
+                FROM comment
+                WHERE post_id = NEW.post_id AND is_deleted = 0 AND status = 1
+            ),
             update_time = CURRENT_TIMESTAMP
         WHERE id = NEW.post_id;
 
@@ -503,13 +538,21 @@ BEGIN
     -- 有效评论变为无效
     IF v_old_active = 1 AND v_new_active = 0 THEN
         UPDATE post
-        SET comment_count = GREATEST(comment_count - 1, 0),
+        SET comment_count = (
+                SELECT COUNT(*)
+                FROM comment
+                WHERE post_id = NEW.post_id AND is_deleted = 0 AND status = 1
+            ),
             update_time = CURRENT_TIMESTAMP
         WHERE id = NEW.post_id;
     -- 无效评论变为有效
     ELSEIF v_old_active = 0 AND v_new_active = 1 THEN
         UPDATE post
-        SET comment_count = comment_count + 1,
+        SET comment_count = (
+                SELECT COUNT(*)
+                FROM comment
+                WHERE post_id = NEW.post_id AND is_deleted = 0 AND status = 1
+            ),
             update_time = CURRENT_TIMESTAMP
         WHERE id = NEW.post_id;
     END IF;
@@ -524,7 +567,11 @@ FOR EACH ROW
 BEGIN
     IF OLD.is_deleted = 0 AND OLD.status = 1 THEN
         UPDATE post
-        SET comment_count = GREATEST(comment_count - 1, 0),
+        SET comment_count = (
+                SELECT COUNT(*)
+                FROM comment
+                WHERE post_id = OLD.post_id AND is_deleted = 0 AND status = 1
+            ),
             update_time = CURRENT_TIMESTAMP
         WHERE id = OLD.post_id;
     END IF;
@@ -551,7 +598,11 @@ BEGIN
 
     -- 更新收藏计数
     UPDATE post
-    SET favorite_count = favorite_count + 1,
+    SET favorite_count = (
+            SELECT COUNT(*)
+            FROM favorite
+            WHERE post_id = NEW.post_id
+        ),
         update_time = CURRENT_TIMESTAMP
     WHERE id = NEW.post_id;
 
@@ -575,7 +626,11 @@ FOR EACH ROW
 BEGIN
     -- 更新收藏计数
     UPDATE post
-    SET favorite_count = GREATEST(favorite_count - 1, 0),
+    SET favorite_count = (
+            SELECT COUNT(*)
+            FROM favorite
+            WHERE post_id = OLD.post_id
+        ),
         update_time = CURRENT_TIMESTAMP
     WHERE id = OLD.post_id;
 
@@ -603,7 +658,11 @@ BEGIN
 
     -- 更新点赞计数
     UPDATE post
-    SET like_count = like_count + 1,
+    SET like_count = (
+            SELECT COUNT(*)
+            FROM `like`
+            WHERE post_id = NEW.post_id
+        ),
         update_time = CURRENT_TIMESTAMP
     WHERE id = NEW.post_id;
 
@@ -627,7 +686,11 @@ FOR EACH ROW
 BEGIN
     -- 更新点赞计数
     UPDATE post
-    SET like_count = GREATEST(like_count - 1, 0),
+    SET like_count = (
+            SELECT COUNT(*)
+            FROM `like`
+            WHERE post_id = OLD.post_id
+        ),
         update_time = CURRENT_TIMESTAMP
     WHERE id = OLD.post_id;
 
@@ -668,11 +731,19 @@ AFTER INSERT ON vote_record
 FOR EACH ROW
 BEGIN
     UPDATE vote_option
-    SET count = count + 1
+    SET `count` = (
+        SELECT COUNT(*)
+        FROM vote_record
+        WHERE option_id = NEW.option_id
+    )
     WHERE id = NEW.option_id;
 
     UPDATE vote
-    SET total_count = total_count + 1,
+    SET total_count = (
+            SELECT COUNT(DISTINCT user_id)
+            FROM vote_record
+            WHERE vote_id = NEW.vote_id
+        ),
         update_time = CURRENT_TIMESTAMP
     WHERE id = NEW.vote_id;
 END //
@@ -685,11 +756,19 @@ AFTER DELETE ON vote_record
 FOR EACH ROW
 BEGIN
     UPDATE vote_option
-    SET count = GREATEST(count - 1, 0)
+    SET `count` = (
+        SELECT COUNT(*)
+        FROM vote_record
+        WHERE option_id = OLD.option_id
+    )
     WHERE id = OLD.option_id;
 
     UPDATE vote
-    SET total_count = GREATEST(total_count - 1, 0),
+    SET total_count = (
+            SELECT COUNT(DISTINCT user_id)
+            FROM vote_record
+            WHERE vote_id = OLD.vote_id
+        ),
         update_time = CURRENT_TIMESTAMP
     WHERE id = OLD.vote_id;
 END //

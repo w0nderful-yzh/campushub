@@ -1,7 +1,6 @@
 package com.yzh.campushub.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yzh.campushub.dto.CreateVoteDTO;
@@ -117,7 +116,7 @@ public class VoteServiceImpl extends ServiceImpl<VoteMapper, Vote> implements Vo
         Long userId = UserContext.getUserId();
         if (userId == null) userId = 1L;
 
-        Vote vote = getById(voteId);
+        Vote vote = baseMapper.selectByIdForUpdate(voteId);
         if (vote == null || vote.getIsDeleted() == 1) {
             return Result.fail("投票不存在");
         }
@@ -139,8 +138,9 @@ public class VoteServiceImpl extends ServiceImpl<VoteMapper, Vote> implements Vo
         if (optionIds == null || optionIds.isEmpty()) {
             return Result.fail("请选择至少一个选项");
         }
-        if (optionIds.size() > vote.getMaxSelect()) {
-            return Result.fail("最多只能选择 " + vote.getMaxSelect() + " 项");
+        Integer maxSelect = vote.getMaxSelect() == null ? 1 : vote.getMaxSelect();
+        if (optionIds.size() > maxSelect) {
+            return Result.fail("最多只能选择 " + maxSelect + " 项");
         }
 
         // Validate options belong to this vote
@@ -159,17 +159,10 @@ public class VoteServiceImpl extends ServiceImpl<VoteMapper, Vote> implements Vo
             record.setUserId(userId);
             record.setCreateTime(LocalDateTime.now());
             recordMapper.insert(record);
-
-            UpdateWrapper<VoteOption> ouw = new UpdateWrapper<>();
-            ouw.eq("id", optionId);
-            ouw.setSql("`count` = `count` + 1");
-            optionMapper.update(null, ouw);
+            optionMapper.refreshCount(optionId);
         }
 
-        UpdateWrapper<Vote> vuw = new UpdateWrapper<>();
-        vuw.eq("id", voteId);
-        vuw.setSql("total_count = total_count + 1");
-        update(null, vuw);
+        baseMapper.refreshTotalCount(voteId);
 
         return Result.ok();
     }

@@ -68,8 +68,8 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
                     .or().like(Post::getContent, queryDTO.getKeyword()));
         }
 
-    // 仅过滤逻辑删除，保留历史状态帖子（避免首页漏数据）
         wrapper.eq(Post::getIsDeleted, 0);
+        wrapper.eq(Post::getStatus, 1);
 
         // sort
         if ("hottest".equalsIgnoreCase(queryDTO.getSortType())) {
@@ -123,7 +123,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
         post.setLikeCount(0);
         post.setCommentCount(0);
         post.setFavoriteCount(0);
-        post.setStatus(0); // 0: Normal
+        post.setStatus(1);
         post.setIsDeleted(0);
         post.setIsTop(0);
 
@@ -152,7 +152,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
     @Override
     public Result getPostDetail(Long postId) {
         Post post = getById(postId);
-        if (post == null || post.getIsDeleted() == 1) {
+        if (post == null || post.getIsDeleted() == 1 || !Integer.valueOf(1).equals(post.getStatus())) {
             return Result.fail("Post not found");
         }
 
@@ -320,6 +320,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
         wrapper.eq(Post::getUserId, userId);
         // filter out deleted posts
         wrapper.eq(Post::getIsDeleted, 0);
+        wrapper.eq(Post::getStatus, 1);
         
         // standard ordering
         wrapper.orderByDesc(Post::getCreateTime);

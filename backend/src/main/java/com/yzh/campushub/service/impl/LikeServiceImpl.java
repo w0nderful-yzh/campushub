@@ -1,7 +1,6 @@
 package com.yzh.campushub.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yzh.campushub.dto.Result;
 import com.yzh.campushub.entity.Like;
@@ -9,7 +8,6 @@ import com.yzh.campushub.entity.Post;
 import com.yzh.campushub.mapper.LikeMapper;
 import com.yzh.campushub.mapper.PostMapper;
 import com.yzh.campushub.service.LikeService;
-import com.yzh.campushub.service.NoticeService;
 import com.yzh.campushub.utils.UserContext;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yzh.campushub.dto.PostQueryDTO;
@@ -21,6 +19,7 @@ import com.yzh.campushub.mapper.UserMapper;
 import org.springframework.beans.BeanUtils;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,9 +40,6 @@ public class LikeServiceImpl extends ServiceImpl<LikeMapper, Like> implements Li
     @Autowired
     private CategoryMapper categoryMapper;
 
-    @Autowired
-    private NoticeService noticeService;
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Result likePost(Long postId) {
@@ -54,7 +50,7 @@ public class LikeServiceImpl extends ServiceImpl<LikeMapper, Like> implements Li
 
         // Check if post exists
         Post post = postMapper.selectById(postId);
-        if (post == null || post.getIsDeleted() == 1) {
+        if (post == null || post.getIsDeleted() == 1 || !Integer.valueOf(1).equals(post.getStatus())) {
             return Result.fail("Post not found");
         }
 
@@ -64,31 +60,23 @@ public class LikeServiceImpl extends ServiceImpl<LikeMapper, Like> implements Li
         queryWrapper.eq(Like::getUserId, userId);
         Like existingLike = getOne(queryWrapper);
 
-        UpdateWrapper<Post> updateWrapper = new UpdateWrapper<>();
-        updateWrapper.eq("id", postId);
-
         if (existingLike != null) {
             // Already liked, so unlike
             removeById(existingLike.getId());
-            // Decrement like count
-            updateWrapper.setSql("like_count = like_count - 1");
         } else {
             // Not liked, so like
             Like newLike = new Like();
             newLike.setPostId(postId);
             newLike.setUserId(userId);
             newLike.setCreateTime(LocalDateTime.now());
-            save(newLike);
-            // Increment like count
-            updateWrapper.setSql("like_count = like_count + 1");
-
-            User liker = userMapper.selectById(userId);
-            String likerName = liker != null ? liker.getNickname() : "someone";
-            noticeService.createNotice(post.getUserId(), userId, 1, postId, null,
-                    likerName + " 赞了你的帖子");
+            try {
+                save(newLike);
+            } catch (DuplicateKeyException ignored) {
+                // Concurrent duplicate like is already the desired final state.
+            }
         }
-        
-        postMapper.update(null, updateWrapper);
+
+        postMapper.refreshInteractionCounts(postId);
         
         return Result.ok();
     }
@@ -103,7 +91,7 @@ public class LikeServiceImpl extends ServiceImpl<LikeMapper, Like> implements Li
 
         // Check if post exists
         Post post = postMapper.selectById(postId);
-        if (post == null || post.getIsDeleted() == 1) {
+        if (post == null || post.getIsDeleted() == 1 || !Integer.valueOf(1).equals(post.getStatus())) {
             return Result.fail("Post not found");
         }
 
@@ -116,12 +104,7 @@ public class LikeServiceImpl extends ServiceImpl<LikeMapper, Like> implements Li
         if (existingLike != null) {
             // Remove like
             removeById(existingLike.getId());
-            
-            // Decrement like count
-            UpdateWrapper<Post> updateWrapper = new UpdateWrapper<>();
-            updateWrapper.eq("id", postId);
-            updateWrapper.setSql("like_count = like_count - 1");
-            postMapper.update(null, updateWrapper);
+            postMapper.refreshInteractionCounts(postId);
         }
         
         return Result.ok();
@@ -155,7 +138,7 @@ public class LikeServiceImpl extends ServiceImpl<LikeMapper, Like> implements Li
 
         List<PostVO> postVOList = likes.stream().map(like -> {
             Post post = postMap.get(like.getPostId());
-            if (post == null || post.getIsDeleted() == 1) {
+            if (post == null || post.getIsDeleted() == 1 || !Integer.valueOf(1).equals(post.getStatus())) {
                 return null; // Skip deleted posts
             }
 

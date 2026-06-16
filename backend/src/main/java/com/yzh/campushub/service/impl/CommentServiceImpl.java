@@ -1,7 +1,6 @@
 package com.yzh.campushub.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yzh.campushub.dto.CreateCommentDTO;
 import com.yzh.campushub.dto.Result;
@@ -12,7 +11,6 @@ import com.yzh.campushub.mapper.CommentMapper;
 import com.yzh.campushub.mapper.PostMapper;
 import com.yzh.campushub.mapper.UserMapper;
 import com.yzh.campushub.service.CommentService;
-import com.yzh.campushub.service.NoticeService;
 import com.yzh.campushub.utils.UserContext;
 import com.yzh.campushub.vo.CommentVO;
 import org.springframework.beans.BeanUtils;
@@ -35,9 +33,6 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
     @Autowired
     private UserMapper userMapper;
 
-    @Autowired
-    private NoticeService noticeService;
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Result createComment(CreateCommentDTO createCommentDTO) {
@@ -48,7 +43,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
 
         // Check if post exists
         Post post = postMapper.selectById(createCommentDTO.getPostId());
-        if (post == null || post.getIsDeleted() == 1) {
+        if (post == null || post.getIsDeleted() == 1 || !Integer.valueOf(1).equals(post.getStatus())) {
             return Result.fail("Post not found");
         }
 
@@ -60,7 +55,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
         comment.setCreateTime(LocalDateTime.now());
         comment.setUpdateTime(LocalDateTime.now());
         comment.setLikeCount(0);
-        comment.setStatus(0);
+        comment.setStatus(1);
         comment.setIsDeleted(0);
         
         if (createCommentDTO.getParentId() == null) {
@@ -73,18 +68,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
 
         // Save comment
         save(comment);
-
-        // Update post comment count safely
-        UpdateWrapper<Post> updateWrapper = new UpdateWrapper<>();
-        updateWrapper.eq("id", post.getId());
-        updateWrapper.setSql("comment_count = comment_count + 1");
-        postMapper.update(null, updateWrapper);
-
-        // Create notification for post author
-        User commenter = userMapper.selectById(userId);
-        String commenterName = commenter != null ? commenter.getNickname() : "someone";
-        noticeService.createNotice(post.getUserId(), userId, 2, post.getId(), comment.getId(),
-                commenterName + " 评论了你的帖子");
+        postMapper.refreshInteractionCounts(post.getId());
 
         return Result.ok();
     }
@@ -93,7 +77,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
     public Result listPostComments(Long postId) {
         // 1. Check if post exists
         Post post = postMapper.selectById(postId);
-        if (post == null || post.getIsDeleted() == 1) {
+        if (post == null || post.getIsDeleted() == 1 || !Integer.valueOf(1).equals(post.getStatus())) {
             return Result.fail("Post not found");
         }
 
@@ -101,6 +85,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
         LambdaQueryWrapper<Comment> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Comment::getPostId, postId);
         wrapper.eq(Comment::getIsDeleted, 0);
+        wrapper.eq(Comment::getStatus, 1);
         wrapper.orderByAsc(Comment::getCreateTime);
         List<Comment> commentList = list(wrapper);
 
@@ -203,12 +188,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
         comment.setIsDeleted(1);
         comment.setUpdateTime(LocalDateTime.now());
         updateById(comment);
-
-        // Update post comment count
-        UpdateWrapper<Post> updateWrapper = new UpdateWrapper<>();
-        updateWrapper.eq("id", comment.getPostId());
-        updateWrapper.setSql("comment_count = comment_count - 1");
-        postMapper.update(null, updateWrapper);
+        postMapper.refreshInteractionCounts(comment.getPostId());
 
         return Result.ok();
     }

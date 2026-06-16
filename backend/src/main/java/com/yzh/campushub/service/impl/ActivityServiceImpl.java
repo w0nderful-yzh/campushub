@@ -1,7 +1,6 @@
 package com.yzh.campushub.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yzh.campushub.dto.CreateActivityDTO;
@@ -195,7 +194,7 @@ public class ActivityServiceImpl extends ServiceImpl<ActivityMapper, Activity> i
         Long userId = UserContext.getUserId();
         if (userId == null) userId = 1L;
 
-        Activity activity = getById(activityId);
+        Activity activity = baseMapper.selectByIdForUpdate(activityId);
         if (activity == null || activity.getIsDeleted() == 1) {
             return Result.fail("活动不存在");
         }
@@ -203,18 +202,26 @@ public class ActivityServiceImpl extends ServiceImpl<ActivityMapper, Activity> i
             return Result.fail("活动已结束或已取消");
         }
 
-        // Check duplicate
+        // Check existing signup, including previously cancelled rows kept by older code.
         LambdaQueryWrapper<ActivitySignup> dq = new LambdaQueryWrapper<>();
         dq.eq(ActivitySignup::getActivityId, activityId);
         dq.eq(ActivitySignup::getUserId, userId);
-        dq.eq(ActivitySignup::getStatus, 1);
-        if (signupMapper.selectCount(dq) > 0) {
+        ActivitySignup existingSignup = signupMapper.selectOne(dq);
+        if (existingSignup != null && Integer.valueOf(1).equals(existingSignup.getStatus())) {
             return Result.fail("你已报名该活动");
         }
 
         // Check capacity
-        if (activity.getMaxParticipants() > 0 && activity.getCurrentCount() >= activity.getMaxParticipants()) {
+        Integer maxParticipants = activity.getMaxParticipants() == null ? 0 : activity.getMaxParticipants();
+        LambdaQueryWrapper<ActivitySignup> activeCountQuery = new LambdaQueryWrapper<>();
+        activeCountQuery.eq(ActivitySignup::getActivityId, activityId);
+        activeCountQuery.eq(ActivitySignup::getStatus, 1);
+        if (maxParticipants > 0 && signupMapper.selectCount(activeCountQuery) >= maxParticipants) {
             return Result.fail("报名人数已满");
+        }
+
+        if (existingSignup != null) {
+            signupMapper.deleteById(existingSignup.getId());
         }
 
         ActivitySignup signup = new ActivitySignup();
@@ -223,11 +230,7 @@ public class ActivityServiceImpl extends ServiceImpl<ActivityMapper, Activity> i
         signup.setStatus(1);
         signup.setCreateTime(LocalDateTime.now());
         signupMapper.insert(signup);
-
-        UpdateWrapper<Activity> uw = new UpdateWrapper<>();
-        uw.eq("id", activityId);
-        uw.setSql("current_count = current_count + 1");
-        update(null, uw);
+        baseMapper.refreshCurrentCount(activityId);
 
         return Result.ok();
     }
@@ -248,13 +251,8 @@ public class ActivityServiceImpl extends ServiceImpl<ActivityMapper, Activity> i
             return Result.fail("你尚未报名该活动");
         }
 
-        signup.setStatus(0);
-        signupMapper.updateById(signup);
-
-        UpdateWrapper<Activity> uw = new UpdateWrapper<>();
-        uw.eq("id", activityId);
-        uw.setSql("current_count = current_count - 1");
-        update(null, uw);
+        signupMapper.deleteById(signup.getId());
+        baseMapper.refreshCurrentCount(activityId);
 
         return Result.ok();
     }

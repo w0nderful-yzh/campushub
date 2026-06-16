@@ -143,7 +143,8 @@ public class PostSearchServiceImpl implements PostSearchService {
     @Override
     public Result reindexAll() {
         List<Post> posts = postMapper.selectList(new LambdaQueryWrapper<Post>()
-                .eq(Post::getIsDeleted, 0));
+                .eq(Post::getIsDeleted, 0)
+                .eq(Post::getStatus, 1));
         for (Post post : posts) {
             indexPost(post);
         }
@@ -155,7 +156,7 @@ public class PostSearchServiceImpl implements PostSearchService {
         if (!enabled || post == null || post.getId() == null) {
             return;
         }
-        if (Integer.valueOf(1).equals(post.getIsDeleted())) {
+        if (Integer.valueOf(1).equals(post.getIsDeleted()) || !Integer.valueOf(1).equals(post.getStatus())) {
             deletePost(post.getId());
             return;
         }
@@ -284,6 +285,7 @@ public class PostSearchServiceImpl implements PostSearchService {
 
         List<Object> filters = new ArrayList<>();
         filters.add(Map.of("term", Map.of("isDeleted", 0)));
+        filters.add(Map.of("term", Map.of("status", 1)));
         if (queryDTO.getCategoryId() != null) {
             filters.add(Map.of("term", Map.of("categoryId", queryDTO.getCategoryId())));
         }
@@ -357,6 +359,7 @@ public class PostSearchServiceImpl implements PostSearchService {
         int pageSize = queryDTO.getPageSize() == null || queryDTO.getPageSize() < 1 ? 10 : Math.min(queryDTO.getPageSize(), 50);
         LambdaQueryWrapper<Post> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Post::getIsDeleted, 0);
+        wrapper.eq(Post::getStatus, 1);
         if (queryDTO.getCategoryId() != null) {
             wrapper.eq(Post::getCategoryId, queryDTO.getCategoryId());
         }
@@ -378,6 +381,7 @@ public class PostSearchServiceImpl implements PostSearchService {
     private List<String> mysqlFallbackSuggestions(String keyword, int size) {
         LambdaQueryWrapper<Post> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Post::getIsDeleted, 0)
+                .eq(Post::getStatus, 1)
                 .and(w -> w.like(Post::getTitle, keyword).or().like(Post::getContent, keyword))
                 .orderByDesc(Post::getUpdateTime)
                 .last("LIMIT " + size);
