@@ -33,6 +33,14 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
     @Autowired
     private UserMapper userMapper;
 
+    private boolean isAdmin(Long userId) {
+        if (userId == null) {
+            return false;
+        }
+        User user = userMapper.selectById(userId);
+        return user != null && Integer.valueOf(1).equals(user.getRole());
+    }
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Result createComment(CreateCommentDTO createCommentDTO) {
@@ -179,8 +187,8 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
             return Result.fail("评论不存在");
         }
 
-        // Check permission (only author can delete)
-        if (!comment.getUserId().equals(userId)) {
+        // Check permission: authors can delete their own comments, admins can delete any comment.
+        if (!comment.getUserId().equals(userId) && !isAdmin(userId)) {
             return Result.fail("无权删除此评论");
         }
 

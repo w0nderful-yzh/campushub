@@ -13,6 +13,7 @@
         <router-link class="nav-link" to="/posts/create">发帖</router-link>
         <router-link class="nav-link" to="/activities">活动</router-link>
         <router-link class="nav-link" to="/votes">投票</router-link>
+        <router-link v-if="authStore.isAdmin" class="nav-link" to="/admin/reports">管理</router-link>
         <router-link v-if="authStore.isLoggedIn" class="nav-link" to="/me">
           我的主页
         </router-link>

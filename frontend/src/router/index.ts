@@ -122,7 +122,7 @@ const router = createRouter({
           path: 'admin/reports',
           name: 'admin-reports',
           component: () => import('@/views/admin/ReportManageView.vue'),
-          meta: { requiresAuth: true }
+          meta: { requiresAuth: true, requiresAdmin: true }
         }
       ]
     },

@@ -29,6 +29,14 @@ public class ReportServiceImpl extends ServiceImpl<ReportMapper, Report> impleme
     @Autowired
     private UserMapper userMapper;
 
+    private boolean isAdmin(Long userId) {
+        if (userId == null) {
+            return false;
+        }
+        User user = userMapper.selectById(userId);
+        return user != null && Integer.valueOf(1).equals(user.getRole());
+    }
+
     @Override
     public Result createReport(CreateReportDTO dto) {
         Long userId = UserContext.getUserId();
@@ -86,6 +94,11 @@ public class ReportServiceImpl extends ServiceImpl<ReportMapper, Report> impleme
 
     @Override
     public Result listReports(Integer status, Integer pageNum, Integer pageSize) {
+        Long userId = UserContext.getUserId();
+        if (!isAdmin(userId)) {
+            return Result.fail(403, "仅管理员可以查看举报列表");
+        }
+
         Page<Report> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<Report> query = new LambdaQueryWrapper<>();
         if (status != null) {
@@ -138,7 +151,9 @@ public class ReportServiceImpl extends ServiceImpl<ReportMapper, Report> impleme
     @Override
     public Result handleReport(Long reportId, String handleResult) {
         Long userId = UserContext.getUserId();
-        if (userId == null) userId = 1L;
+        if (!isAdmin(userId)) {
+            return Result.fail(403, "仅管理员可以处理举报");
+        }
 
         Report report = getById(reportId);
         if (report == null) {

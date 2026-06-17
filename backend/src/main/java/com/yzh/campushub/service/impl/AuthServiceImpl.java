@@ -60,6 +60,8 @@ public class AuthServiceImpl implements AuthService {
                 .setNickname(registerDTO.getNickname())
                 .setAvatar("F:\\MyWork\\images\\default_avatar.jpg")
                 .setStatus(1)
+                .setRole(0)
+                .setIsDeleted(0)
                 .setCreateTime(LocalDateTime.now());
         userService.save(user);
         log.info("注册成功");
@@ -136,4 +138,3 @@ public class AuthServiceImpl implements AuthService {
         return Result.ok(userInfoVO);
     }
 }
-

@@ -33,14 +33,14 @@
 
           <n-space>
             <router-link
-              v-if="canManagePost"
+              v-if="canEditPost"
               :to="`/posts/${post.id}/edit`"
             >
               <n-button quaternary>编辑</n-button>
             </router-link>
 
             <n-popconfirm
-              v-if="canManagePost"
+              v-if="canDeletePost"
               @positive-click="handleDeletePost"
             >
               <template #trigger>
@@ -87,6 +87,14 @@
             @click="handleFavorite"
           >
             {{ post.isFavorited ? '取消收藏' : '收藏' }}
+          </n-button>
+          <n-button
+            v-if="canReportPost"
+            quaternary
+            type="warning"
+            @click="openReport(1, post.id, '举报帖子')"
+          >
+            举报
           </n-button>
         </div>
       </section>
@@ -167,6 +175,15 @@
                   >
                     回复
                   </n-button>
+                  <n-button
+                    v-if="canReportComment(comment.userId)"
+                    size="small"
+                    quaternary
+                    type="warning"
+                    @click="openReport(2, comment.id, '举报评论')"
+                  >
+                    举报
+                  </n-button>
 
                   <n-popconfirm
                     v-if="canDeleteComment(comment.userId)"
@@ -211,6 +228,15 @@
                       >
                         回复
                       </n-button>
+                      <n-button
+                        v-if="canReportComment(child.userId)"
+                        size="small"
+                        quaternary
+                        type="warning"
+                        @click="openReport(2, child.id, '举报回复')"
+                      >
+                        举报
+                      </n-button>
 
                       <n-popconfirm
                         v-if="canDeleteComment(child.userId)"
@@ -237,6 +263,29 @@
         />
       </section>
     </template>
+
+    <n-modal
+      v-model:show="reportModalVisible"
+      preset="card"
+      :title="reportTitle"
+      class="report-modal"
+      :bordered="false"
+    >
+      <n-input
+        v-model:value="reportReason"
+        type="textarea"
+        :autosize="{ minRows: 4, maxRows: 6 }"
+        placeholder="请说明举报原因，例如广告、违规内容、标题不实等"
+      />
+      <template #footer>
+        <div class="report-modal-actions">
+          <n-button quaternary @click="reportModalVisible = false">取消</n-button>
+          <n-button type="primary" :loading="submittingReport" @click="handleSubmitReport">
+            提交举报
+          </n-button>
+        </div>
+      </template>
+    </n-modal>
   </div>
 </template>
 
@@ -248,6 +297,7 @@ import {
   NButton,
   NImage,
   NInput,
+  NModal,
   NPopconfirm,
   NSpace,
   NSpin
@@ -259,6 +309,7 @@ import { createCommentApi, deleteCommentApi, getPostCommentsApi } from '@/api/co
 import { cancelFavoriteApi, toggleFavoriteApi } from '@/api/favorite'
 import { cancelLikeApi, toggleLikeApi } from '@/api/like'
 import { deletePostApi, getPostDetailApi } from '@/api/post'
+import { createReportApi } from '@/api/report'
 import EmptyState from '@/components/EmptyState.vue'
 import { useAuthStore } from '@/stores/auth'
 import type { CommentVO } from '@/types/comment'
@@ -275,6 +326,7 @@ const loading = ref(false)
 const likeLoading = ref(false)
 const favoriteLoading = ref(false)
 const submittingComment = ref(false)
+const submittingReport = ref(false)
 const errorText = ref('')
 const post = ref<PostDetailVO | null>(null)
 const comments = ref<CommentVO[]>([])
@@ -282,12 +334,24 @@ const commentContent = ref('')
 const replyParentId = ref<number>(0)
 const replyUserId = ref<number | undefined>(undefined)
 const replyNickname = ref('')
+const reportModalVisible = ref(false)
+const reportTitle = ref('举报')
+const reportReason = ref('')
+const reportTarget = ref<{ targetType: number; targetId: number } | null>(null)
 
 const postId = computed(() => Number(route.params.id))
 const currentUserId = computed(() => authStore.user?.id || 0)
-const canManagePost = computed(() => {
+const canEditPost = computed(() => {
   if (!post.value || !currentUserId.value) return false
   return post.value.author?.id === currentUserId.value || post.value.userId === currentUserId.value
+})
+const canDeletePost = computed(() => {
+  if (!post.value || !currentUserId.value) return false
+  return authStore.isAdmin || post.value.author?.id === currentUserId.value || post.value.userId === currentUserId.value
+})
+const canReportPost = computed(() => {
+  if (!post.value || !currentUserId.value || authStore.isAdmin) return false
+  return post.value.author?.id !== currentUserId.value && post.value.userId !== currentUserId.value
 })
 const replyHint = computed(() => {
   if (!replyParentId.value || !replyNickname.value) return ''
@@ -295,7 +359,11 @@ const replyHint = computed(() => {
 })
 
 function canDeleteComment(userId: number) {
-  return Boolean(currentUserId.value && userId === currentUserId.value)
+  return Boolean(currentUserId.value && (userId === currentUserId.value || authStore.isAdmin))
+}
+
+function canReportComment(userId: number) {
+  return Boolean(currentUserId.value && !authStore.isAdmin && userId !== currentUserId.value)
 }
 
 function ensureLoggedIn() {
@@ -429,6 +497,35 @@ async function handleDeletePost() {
   await deletePostApi(post.value.id)
   message.success('帖子已删除')
   router.push('/')
+}
+
+function openReport(targetType: number, targetId: number, title: string) {
+  if (!ensureLoggedIn()) return
+
+  reportTarget.value = { targetType, targetId }
+  reportTitle.value = title
+  reportReason.value = ''
+  reportModalVisible.value = true
+}
+
+async function handleSubmitReport() {
+  if (!reportTarget.value) return
+  if (!reportReason.value.trim()) {
+    message.warning('请输入举报原因')
+    return
+  }
+
+  submittingReport.value = true
+  try {
+    await createReportApi({
+      ...reportTarget.value,
+      reason: reportReason.value.trim()
+    })
+    message.success('举报已提交，等待管理员处理')
+    reportModalVisible.value = false
+  } finally {
+    submittingReport.value = false
+  }
 }
 
 onMounted(() => {
@@ -567,6 +664,16 @@ onMounted(() => {
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+.report-modal {
+  width: min(520px, calc(100vw - 32px));
+}
+
+.report-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 .child-list {

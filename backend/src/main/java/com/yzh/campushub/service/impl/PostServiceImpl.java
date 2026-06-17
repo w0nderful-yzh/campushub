@@ -52,6 +52,14 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
     @Autowired
     private ApplicationEventPublisher eventPublisher;
 
+    private boolean isAdmin(Long userId) {
+        if (userId == null) {
+            return false;
+        }
+        User user = userMapper.selectById(userId);
+        return user != null && Integer.valueOf(1).equals(user.getRole());
+    }
+
     @Override
     public Result listPosts(PostQueryDTO queryDTO) {
         Page<Post> page = new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize());
@@ -288,8 +296,8 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
             return Result.fail("帖子不存在");
         }
 
-        // 3. 校验权限
-        if (!post.getUserId().equals(currentUserId)) {
+        // 3. 校验权限：作者可以删除自己的帖子，管理员可以删除任意帖子
+        if (!post.getUserId().equals(currentUserId) && !isAdmin(currentUserId)) {
             log.warn("删除失败，无权操作，帖子ID: {}, 当前用户ID: {}, 作者ID: {}", postId, currentUserId, post.getUserId());
             return Result.fail("无权删除此帖子");
         }

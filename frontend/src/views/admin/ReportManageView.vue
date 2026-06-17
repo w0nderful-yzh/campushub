@@ -32,6 +32,15 @@
             <div v-if="report.status === 0" class="report-actions">
               <n-input v-model="handleResults[report.id]" placeholder="处理结果" size="small" style="width: 260px;" />
               <n-button type="primary" size="small" @click="handleReport(report.id)">处理</n-button>
+              <n-popconfirm
+                v-if="report.targetType === 1"
+                @positive-click="handleDeleteReportedPost(report)"
+              >
+                <template #trigger>
+                  <n-button type="error" size="small" quaternary>删除帖子</n-button>
+                </template>
+                确认删除这条被举报的帖子？删除后普通用户将无法再看到它。
+              </n-popconfirm>
             </div>
           </div>
         </div>
@@ -52,8 +61,9 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref, watch } from 'vue'
-import { NButton, NInput, NSpin, NTag, NTabs, NTabPane } from 'naive-ui'
+import { NButton, NInput, NPopconfirm, NSpin, NTag, NTabs, NTabPane } from 'naive-ui'
 
+import { deletePostApi } from '@/api/post'
 import { getReportsApi, handleReportApi, type ReportVO } from '@/api/report'
 import EmptyState from '@/components/EmptyState.vue'
 import PaginationBar from '@/components/PaginationBar.vue'
@@ -104,6 +114,14 @@ async function handleReport(reportId: number) {
   }
   await handleReportApi(reportId, result)
   message.success('处理成功')
+  loadReports()
+}
+
+async function handleDeleteReportedPost(report: ReportVO) {
+  const result = handleResults[report.id]?.trim() || '已删除违规帖子'
+  await deletePostApi(report.targetId)
+  await handleReportApi(report.id, result)
+  message.success('帖子已删除，举报已处理')
   loadReports()
 }
 

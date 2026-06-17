@@ -31,6 +31,10 @@ router.beforeEach(async (to) => {
     }
   }
 
+  if (to.meta.requiresAdmin && !authStore.isAdmin) {
+    return { path: '/' }
+  }
+
   return true
 })
 
